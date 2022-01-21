@@ -22,12 +22,16 @@ namespace UdpMulticastChatHW
 
         private async void FormChat_Load(object sender, EventArgs e)
         {
-            await ActiveUser.ReceiveAsync();
+            await foreach (var item in ActiveUser.ReceiveAsync())
+            {
+                textBoxChat.AppendText(item);
+            }
         }
 
         private async void buttonSend_Click(object sender, EventArgs e)
         {
-            await ActiveUser.SendAsync();
+            await ActiveUser.SendAsync(($"{ActiveUser.Name}: {textBoxMessage.Text}{Environment.NewLine}"));
+            textBoxMessage.Clear();
         }
     }
 }

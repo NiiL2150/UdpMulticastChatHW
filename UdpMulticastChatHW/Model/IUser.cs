@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -19,8 +21,8 @@ namespace UdpMulticastChatHW.Model
             return new User(name);
         }
 
-        public abstract Task ReceiveAsync();
+        public abstract IAsyncEnumerable<string> ReceiveAsync();
 
-        public abstract Task SendAsync();
+        public abstract Task SendAsync(string text);
     }
 }

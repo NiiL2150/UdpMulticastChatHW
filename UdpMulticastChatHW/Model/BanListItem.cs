@@ -7,15 +7,22 @@ using System.Threading.Tasks;
 
 namespace UdpMulticastChatHW.Model
 {
-    public class BanListItem
+    public class BanListItem : User
     {
-        public string Name { get; set; }
         public DateTime BanExpireDateTime { get; set; }
 
-        public BanListItem(string name, int seconds)
+        public BanListItem(User user, int seconds) : base(user)
         {
-            Name = name;
             BanExpireDateTime = DateTime.Now.AddSeconds(seconds);
+        }
+
+        public bool BanStatus()
+        {
+            if(BanExpireDateTime <= DateTime.Now)
+            {
+                return false;
+            }
+            return true;
         }
     }
 }

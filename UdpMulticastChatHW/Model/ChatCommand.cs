@@ -10,7 +10,7 @@ namespace UdpMulticastChatHW.Model
     {
         public string CommandName { get; set; }
         public int ArgumentCount { get; set; }
-        public delegate object? CommandDelegate(params string[] args);
+        public delegate void CommandDelegate(string[] args);
         public event CommandDelegate CommandEvent;
         public ChatCommand(string name, int argCount, CommandDelegate command)
         {
@@ -18,9 +18,9 @@ namespace UdpMulticastChatHW.Model
             ArgumentCount = argCount;
             CommandEvent = command;
         }
-        public object? Invoke(params string[] args)
+        public void Invoke(string[] args)
         {
-            return CommandEvent.Invoke(args);
+            CommandEvent.Invoke(args);
         }
     }
 }

@@ -8,8 +8,8 @@ namespace UdpMulticastChatHW.Model
 {
     public interface IAdmin
     {
-        protected abstract bool IsCommand(string command);
+        public abstract bool IsCommand(string command);
 
-        protected abstract void HandleCommand(string command);
+        public abstract void HandleCommand(string command);
     }
 }
