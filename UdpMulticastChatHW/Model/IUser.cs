@@ -11,6 +11,7 @@ namespace UdpMulticastChatHW.Model
     public interface IUser
     {
         public string Name { get; set; }
+        public bool IsKicked { get; set; }
 
         public static IUser Admin(string name)
         {
@@ -21,8 +22,12 @@ namespace UdpMulticastChatHW.Model
             return new User(name);
         }
 
-        public abstract IAsyncEnumerable<string> ReceiveAsync();
+        public abstract IAsyncEnumerable<string> ReceiveMessageAsync();
 
-        public abstract Task SendAsync(string text);
+        public abstract Task SendMessageAsync(string text);
+
+        public abstract Task ReceiveSettingsAsync();
+
+        public abstract Task SendSettingsAsync(string setting);
     }
 }

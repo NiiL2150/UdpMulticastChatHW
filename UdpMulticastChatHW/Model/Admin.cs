@@ -13,25 +13,23 @@ namespace UdpMulticastChatHW.Model
         public string Name { get; set; }
         public IList<ChatCommand> Commands { get; set; }
         public IList<BanListItem> BanList { get; set; }
-        public IList<User> Users { get; set; }
+        public bool IsKicked { get; set; } = false;
 
         public Admin()
         {
             Name = "admin";
 
-            Users = new List<User>();
             BanList = new List<BanListItem>();
             Commands = new List<ChatCommand>()
             {
                 new ChatCommand("ban", 2, (string[] args) =>
                 {
-                    User user = new User(Users.First(x=>x.Name == args[0]));
+                    User user = new User(args[0]);
                     if(!Int32.TryParse(args[1], out int seconds))
                     {
                         seconds = Int32.MaxValue;
                     }
                     
-                    Users.Remove(user);
                     HandleCommand($"/kick {args[0]}");
                     BanList.Add(new BanListItem(user, seconds));
                 }),
@@ -46,62 +44,42 @@ namespace UdpMulticastChatHW.Model
                 }),
                 new ChatCommand("kick", 1, (string[] args) =>
                 {
-
+                    Task.Run(async () =>{
+                        await SendSettingsAsync($"KICK {args[0]}");
+                    });
+                }),
+                new ChatCommand("private", 3, (string[] args)=>{
+                    Task.Run(async () =>
+                    {
+                        await ResendMessageAsync($"PRIVATE {args[0]} {args[1]} {args[2]}{Environment.NewLine}");
+                    });
                 })
             };
         }
 
-        public async Task SendAsync(string text)
+        public async IAsyncEnumerable<string> ReceiveMessageAsync()
         {
-            if (IsCommand(text))
-            {
-                HandleCommand(text);
-            }
-            else
-            {
-                byte[] buffer = Encoding.UTF8.GetBytes(text);
-                using (UdpClient client = new UdpClient(AddressFamily.InterNetwork))
-                {
-                    IPAddress dest = IPAddress.Parse("127.0.0.1");
-                    IPEndPoint endPoint = new IPEndPoint(dest, 51234);
-                    client.Connect(endPoint);
-                    await client.SendAsync(buffer, buffer.Length);
-                    client.Close();
-
-                }
-                using (UdpClient client = new UdpClient(AddressFamily.InterNetwork))
-                {
-                    IPAddress dest = IPAddress.Parse("224.5.5.5");
-                    client.JoinMulticastGroup(dest, 2);
-                    IPEndPoint endPoint = new IPEndPoint(dest, 51234);
-                    client.Connect(endPoint);
-                    await client.SendAsync(buffer, buffer.Length);
-                    client.Close();
-                }
-            }
-        }
-
-        public async IAsyncEnumerable<string> ReceiveAsync()
-        {
-            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 51234);
-            IPEndPoint rEndPoint = new IPEndPoint(IPAddress.Any, 0);
             while (true)
             {
-                using (UdpClient client = new UdpClient(endPoint))
+                using (UdpClient client = new UdpClient(IPStorage.AdminEndPoint))
                 {
-                    client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                    client.Reuse();
                     string message = "";
 
                     await Task.Run(() =>
                     {
-                        byte[] result = client.Receive(ref rEndPoint);
+                        var endPoint = IPStorage.ReceiveEndPoint.Clone();
+                        byte[] result = client.Receive(ref endPoint);
                         message = Encoding.UTF8.GetString(result);
                     });
-                    /*
-                    client.Connect(rEndPoint);
-                    UdpReceiveResult result = await client.ReceiveAsync();
-                    string message = Encoding.UTF8.GetString(result.Buffer);
-                    */
+
+                    if (message.StartsWith("/private"))
+                    {
+                        message = message.Substring(1);
+                        string[] strs = message.Split(' ');
+                        HandleCommand(strs[0], strs[1], strs[2], string.Join(' ', strs.Skip(3)));
+                        continue;
+                    }
 
                     while (true)
                     {
@@ -121,9 +99,93 @@ namespace UdpMulticastChatHW.Model
                             break;
                         }
                     }
-                    await SendAsync(message);
+                    await ResendMessageAsync(message);
                     yield return message;
                 }
+            }
+        }
+
+        public async Task SendMessageAsync(string text)
+        {
+            if (IsCommand(text))
+            {
+                HandleCommand(text);
+            }
+            else
+            {
+                if(text.Length == 0) { return; }
+                await ResendMessageAsync($"{this.Name}: {text}{Environment.NewLine}");
+            }
+        }
+
+        public async Task ResendMessageAsync(string text)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(text);
+            using (UdpClient client = new UdpClient(AddressFamily.InterNetwork))
+            {
+                IPEndPoint endPoint = IPStorage.AdminEndPoint;
+                client.Connect(endPoint);
+                await client.SendAsync(buffer, buffer.Length);
+            }
+            using (UdpClient client = new UdpClient(AddressFamily.InterNetwork))
+            {
+                IPEndPoint endPoint = IPStorage.MultiCastEndPoint;
+                IPAddress dest = endPoint.Address;
+                client.JoinMulticastGroup(dest, 2);
+                client.Connect(endPoint);
+                await client.SendAsync(buffer, buffer.Length);
+            }
+        }
+
+        public async Task ReceiveSettingsAsync()
+        {
+            while (true)
+            {
+                using (UdpClient client = new UdpClient(IPStorage.AdminSettings))
+                {
+                    client.Reuse();
+                    string message = "";
+
+                    await Task.Run(() =>
+                    {
+                        var endPoint = IPStorage.ReceiveEndPoint.Clone();
+                        byte[] result = client.Receive(ref endPoint);
+                        message = Encoding.UTF8.GetString(result);
+                    });
+
+                    if (message.Length > 0)
+                    {
+                        if (message.StartsWith("REQUEST CONNECTION"))
+                        {
+                            string name = message.Substring(19);
+                            if (BanList.Any(x => x.Name == name))
+                            {
+                                var user = BanList.First(x => x.Name == name);
+                                if (!user.BanStatus())
+                                {
+                                    BanList.Remove(user);
+                                }
+                                else
+                                {
+                                    HandleCommand($"/kick {name}");
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public async Task SendSettingsAsync(string setting)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(setting);
+            using (UdpClient client = new UdpClient(AddressFamily.InterNetwork))
+            {
+                IPEndPoint endPoint = IPStorage.MultiCastSettings;
+                IPAddress dest = endPoint.Address;
+                client.JoinMulticastGroup(dest, 2);
+                client.Connect(endPoint);
+                await client.SendAsync(buffer, buffer.Length);
             }
         }
 
@@ -149,9 +211,12 @@ namespace UdpMulticastChatHW.Model
             string command2 = command.Substring(1);
             string[] command3 = command2.Split(' ');
 
-            string commandName = command3[0];
-            string[] commandArgs = command3.Skip(1).ToArray();
-            Commands.First(x => x.CommandName == commandName).Invoke(commandArgs);
+            HandleCommand(command3[0], command3.Skip(1).ToArray());
+        }
+
+        public void HandleCommand(string commandName, params string[] commandArgs)
+        {
+            Commands.First(x => x.CommandName == commandName && x.ArgumentCount == commandArgs.Count()).Invoke(commandArgs);
         }
     }
 }

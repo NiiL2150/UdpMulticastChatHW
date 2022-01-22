@@ -11,5 +11,7 @@ namespace UdpMulticastChatHW.Model
         public abstract bool IsCommand(string command);
 
         public abstract void HandleCommand(string command);
+
+        public abstract Task ResendMessageAsync(string text);
     }
 }

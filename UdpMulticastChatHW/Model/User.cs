@@ -11,44 +11,115 @@ namespace UdpMulticastChatHW.Model
     public class User : IUser
     {
         public string Name { get; set; }
+        public bool IsKicked { get; set; } = false;
 
         public User(string name)
         {
             Name = name;
-        }
-        public User(User user)
-        {
-            this.Name = user.Name;
-        }
-
-        public async Task SendAsync(string text)
-        {
-            using (UdpClient client = new UdpClient(AddressFamily.InterNetwork))
+            Task.Run(async () =>
             {
-                IPAddress dest = IPAddress.Parse("127.0.0.1");
-                IPEndPoint endPoint = new IPEndPoint(dest, 51234);
-                client.Connect(endPoint);
-                byte[] buffer = Encoding.UTF8.GetBytes(text);
-                await client.SendAsync(buffer, buffer.Length);
-                client.Close();
-            }
+                await this.SendSettingsAsync($"REQUEST CONNECTION {this.Name}");
+            });
         }
+        public User(User user) : this(user.Name) { }
 
-        public async IAsyncEnumerable<string> ReceiveAsync()
+        public async IAsyncEnumerable<string> ReceiveMessageAsync()
         {
             while (true)
             {
                 using (UdpClient client = new UdpClient(AddressFamily.InterNetwork))
                 {
-                    IPEndPoint endPoint = new IPEndPoint(IPAddress.Any, 51234);
-                    client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                    IPEndPoint endPoint = IPStorage.ReceiveEndPoint;
+                    client.Reuse();
                     client.Client.Bind(endPoint);
-                    IPAddress address = IPAddress.Parse("224.5.5.5");
+                    IPAddress address = IPStorage.MultiCastEndPoint.Address;
                     client.JoinMulticastGroup(address);
                     UdpReceiveResult result = await client.ReceiveAsync();
                     string message = Encoding.UTF8.GetString(result.Buffer);
+                    if (message.StartsWith("PRIVATE"))
+                    {
+                        string[] strs = message.Split(' ');
+                        string sender = strs[1];
+                        string receiver = strs[2];
+                        if (this.Name == sender || this.Name == receiver) {
+                            string msg = string.Join(' ', strs.Skip(3));
+                            message = $"[{sender} -> {receiver}] {msg}";
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
                     yield return message;
                 }
+            }
+        }
+
+        public async Task SendMessageAsync(string text)
+        {
+            if(text.Length == 0) { return; }
+            if (text.StartsWith('/'))
+            {
+                string[] strs = text.Split(' ');
+                string str = strs[0] + ' ';
+                str += this.Name;
+                for (int i = 1; i < strs.Length; i++)
+                {
+                    str += ' ';
+                    str += strs[i];
+                }
+                text = str;
+            }
+            else
+            {
+                text = $"{this.Name}: {text}{Environment.NewLine}";
+            }
+            using (UdpClient client = new UdpClient(AddressFamily.InterNetwork))
+            {
+                IPEndPoint endPoint = IPStorage.AdminEndPoint;
+                client.Connect(endPoint);
+                byte[] buffer = Encoding.UTF8.GetBytes(text);
+                await client.SendAsync(buffer, buffer.Length);
+            }
+        }
+
+        public async Task ReceiveSettingsAsync()
+        {
+            while (true)
+            {
+                using (UdpClient client = new UdpClient(AddressFamily.InterNetwork))
+                {
+                    IPEndPoint endPoint = IPStorage.ReceiveEndPoint;
+                    client.Reuse();
+                    client.Client.Bind(endPoint);
+                    IPAddress address = IPStorage.MultiCastSettings.Address;
+                    client.JoinMulticastGroup(address);
+                    UdpReceiveResult result = await client.ReceiveAsync();
+                    string message = Encoding.UTF8.GetString(result.Buffer);
+
+                    if (message.Length > 0)
+                    {
+                        if (message.StartsWith("KICK"))
+                        {
+                            string name = message.Substring(5);
+                            if(name == this.Name)
+                            {
+                                IsKicked = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public async Task SendSettingsAsync(string setting)
+        {
+            using (UdpClient client = new UdpClient(AddressFamily.InterNetwork))
+            {
+                IPEndPoint endPoint = IPStorage.AdminSettings;
+                client.Connect(endPoint);
+                byte[] buffer = Encoding.UTF8.GetBytes(setting);
+                await client.SendAsync(buffer, buffer.Length);
             }
         }
     }

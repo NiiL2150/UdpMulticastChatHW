@@ -20,10 +20,14 @@ namespace UdpMulticastChatHW
 
         private void buttonLogIn_Click(object sender, EventArgs e)
         {
+            if(textBoxLogIn.Text.Contains(' '))
+            {
+                return;
+            }
             this.Hide();
             FormChat form = new FormChat(IUser.Admin(textBoxLogIn.Text));
             form.ShowDialog();
-            this.Close();
+            this.Show();
         }
     }
 }

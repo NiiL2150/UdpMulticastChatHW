@@ -31,6 +31,7 @@
             this.buttonSend = new System.Windows.Forms.Button();
             this.textBoxChat = new System.Windows.Forms.TextBox();
             this.textBoxMessage = new System.Windows.Forms.TextBox();
+            this.labelName = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // buttonSend
@@ -45,11 +46,12 @@
             // 
             // textBoxChat
             // 
-            this.textBoxChat.Location = new System.Drawing.Point(12, 12);
+            this.textBoxChat.Location = new System.Drawing.Point(12, 27);
             this.textBoxChat.Multiline = true;
             this.textBoxChat.Name = "textBoxChat";
+            this.textBoxChat.ReadOnly = true;
             this.textBoxChat.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.textBoxChat.Size = new System.Drawing.Size(776, 397);
+            this.textBoxChat.Size = new System.Drawing.Size(776, 382);
             this.textBoxChat.TabIndex = 1;
             // 
             // textBoxMessage
@@ -59,17 +61,28 @@
             this.textBoxMessage.Size = new System.Drawing.Size(695, 23);
             this.textBoxMessage.TabIndex = 2;
             // 
+            // labelName
+            // 
+            this.labelName.AutoSize = true;
+            this.labelName.Location = new System.Drawing.Point(12, 9);
+            this.labelName.Name = "labelName";
+            this.labelName.Size = new System.Drawing.Size(37, 15);
+            this.labelName.TabIndex = 3;
+            this.labelName.Text = "name";
+            // 
             // FormChat
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.labelName);
             this.Controls.Add(this.textBoxMessage);
             this.Controls.Add(this.textBoxChat);
             this.Controls.Add(this.buttonSend);
             this.Name = "FormChat";
             this.Text = "FormChat";
             this.Load += new System.EventHandler(this.FormChat_Load);
+            this.Shown += new System.EventHandler(this.FormChat_Shown);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -80,5 +93,6 @@
         private System.Windows.Forms.Button buttonSend;
         private System.Windows.Forms.TextBox textBoxChat;
         private System.Windows.Forms.TextBox textBoxMessage;
+        private System.Windows.Forms.Label labelName;
     }
 }
