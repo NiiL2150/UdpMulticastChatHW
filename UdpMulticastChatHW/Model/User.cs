@@ -13,15 +13,37 @@ namespace UdpMulticastChatHW.Model
         public string Name { get; set; }
         public bool IsKicked { get; set; } = false;
 
+        public User(User user) : this(user.Name) { }
+
         public User(string name)
         {
             Name = name;
-            Task.Run(async () =>
-            {
-                await this.SendSettingsAsync($"REQUEST CONNECTION {this.Name}");
-            });
         }
-        public User(User user) : this(user.Name) { }
+
+        public User(string name, string pass, LogType logType = LogType.LogIn)
+        {
+            Name = name;
+            if (logType == LogType.LogIn)
+            {
+                Task.Run(async () =>
+                {
+                    await this.SendSettingsAsync($"REQUEST CONNECTION {this.Name} {pass}");
+                });
+            }
+            else if(logType == LogType.Register)
+            {
+                Task.Run(async () =>
+                {
+                    await this.SendSettingsAsync($"REGISTER {this.Name} {pass}");
+                });
+            }
+        }
+
+        public enum LogType
+        {
+            LogIn,
+            Register
+        }
 
         public async IAsyncEnumerable<string> ReceiveMessageAsync()
         {

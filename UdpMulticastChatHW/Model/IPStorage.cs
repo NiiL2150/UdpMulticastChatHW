@@ -25,6 +25,22 @@ namespace UdpMulticastChatHW.Model
             ReceiveEndPoint = new IPEndPoint(IPAddress.Any, 51234);
         }
 
+        public static void ChangeMode(NetworkModes mode)
+        {
+            switch (mode)
+            {
+                case NetworkModes.LocalHost:
+                    AdminEndPoint.Address = IPAddress.Parse("127.0.0.1");
+                    AdminSettings.Address = IPAddress.Parse("127.0.0.2");
+                    break;
+                case NetworkModes.LocalNetwork:
+                    //TODO: make this work for local networks
+                    AdminEndPoint.Address = IPAddress.Parse("192.168.5.1");
+                    AdminSettings.Address = IPAddress.Parse("192.168.5.2");
+                    break;
+            }
+        }
+
         public static void Reuse(this UdpClient client)
         {
             client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
@@ -33,6 +49,12 @@ namespace UdpMulticastChatHW.Model
         public static IPEndPoint Clone(this IPEndPoint endPoint)
         {
             return new IPEndPoint(endPoint.Address, endPoint.Port);
+        }
+
+        public enum NetworkModes
+        {
+            LocalHost,
+            LocalNetwork
         }
     }
 }

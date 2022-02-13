@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
+using UdpMulticastChatHW.DBModel;
 
 namespace UdpMulticastChatHW.Model
 {
@@ -15,9 +16,9 @@ namespace UdpMulticastChatHW.Model
         public IList<BanListItem> BanList { get; set; }
         public bool IsKicked { get; set; } = false;
 
-        public Admin()
+        public Admin(string name = "admin")
         {
-            Name = "admin";
+            Name = name;
 
             BanList = new List<BanListItem>();
             Commands = new List<ChatCommand>()
@@ -157,13 +158,52 @@ namespace UdpMulticastChatHW.Model
                     {
                         if (message.StartsWith("REQUEST CONNECTION"))
                         {
-                            string name = message.Substring(19);
+                            string str = message.Substring(19);
+                            string name = str.Split(' ')[0];
+                            string password = str.Split(' ')[1];
                             if (BanList.Any(x => x.Name == name))
                             {
                                 var user = BanList.First(x => x.Name == name);
                                 if (!user.BanStatus())
                                 {
                                     BanList.Remove(user);
+                                }
+                                else
+                                {
+                                    HandleCommand($"/kick {name}");
+                                }
+                            }
+                            ChatDBContext db = new ChatDBContext();
+                            DBUser? tmpUser = db.Users.FirstOrDefault(x => x.Name == name);
+                            if (tmpUser != null)
+                            {
+                                if(tmpUser.Password != password)
+                                {
+                                    HandleCommand($"/kick {name}");
+                                }
+                            }
+                            else
+                            {
+                                HandleCommand($"/kick {name}");
+                            }
+                        }
+
+                        if (message.StartsWith("REGISTER"))
+                        {
+                            string str = message.Substring(9);
+                            string name = str.Split(' ')[0];
+                            string password = str.Split(' ')[1];
+                            ChatDBContext db = new ChatDBContext();
+                            if(db.Users.Any(x => x.Name == name))
+                            {
+                                HandleCommand($"/kick {name}");
+                            }
+                            else
+                            {
+                                if(Form1.IsValidUserName(name) && Form1.IsValidPassword(password))
+                                {
+                                    db.Users.Add(new DBUser { Name = name, Password = password });
+                                    db.SaveChanges();
                                 }
                                 else
                                 {

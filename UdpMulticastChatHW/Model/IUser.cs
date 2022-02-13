@@ -13,14 +13,6 @@ namespace UdpMulticastChatHW.Model
         public string Name { get; set; }
         public bool IsKicked { get; set; }
 
-        public static IUser Admin(string name)
-        {
-            if (name == "admin")
-            {
-                return new Admin();
-            }
-            return new User(name);
-        }
 
         public abstract IAsyncEnumerable<string> ReceiveMessageAsync();
 
