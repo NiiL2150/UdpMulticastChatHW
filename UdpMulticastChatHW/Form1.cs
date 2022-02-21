@@ -19,6 +19,7 @@ namespace UdpMulticastChatHW
         public Form1()
         {
             InitializeComponent();
+            labelIP.Text = $"Your IP: {IPStorage.GetCurrentIP()}";
         }
 
         private void buttonLogIn_Click(object sender, EventArgs e)
@@ -114,11 +115,16 @@ namespace UdpMulticastChatHW
             }
             else if(mode == NetworkModes.LocalHost)
             {
+                mode = NetworkModes.LocalCustom;
+                txt = "Local admin";
+            }
+            else if (mode == NetworkModes.LocalCustom)
+            {
                 mode = NetworkModes.LocalNetwork;
                 txt = "Local network";
             }
             buttonIPMode.Text = txt;
-            IPStorage.ChangeMode(mode);
+            IPStorage.ChangeMode(mode, textBoxIP.Text);
         }
     }
 }

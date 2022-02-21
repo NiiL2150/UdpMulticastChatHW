@@ -20,25 +20,33 @@ namespace UdpMulticastChatHW.Model
         {
             AdminEndPoint = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 51234);
             MultiCastEndPoint = new IPEndPoint(IPAddress.Parse("224.5.5.5"), 51234);
-            AdminSettings = new IPEndPoint(IPAddress.Parse("127.0.0.2"), 51234);
-            MultiCastSettings = new IPEndPoint(IPAddress.Parse("224.6.6.6"), 51234);
+            AdminSettings = new IPEndPoint(IPAddress.Parse("127.0.0.1"), 61234);
+            MultiCastSettings = new IPEndPoint(IPAddress.Parse("224.5.5.5"), 61234);
             ReceiveEndPoint = new IPEndPoint(IPAddress.Any, 51234);
         }
 
-        public static void ChangeMode(NetworkModes mode)
+        public static void ChangeMode(NetworkModes mode, string address = "")
         {
             switch (mode)
             {
                 case NetworkModes.LocalHost:
                     AdminEndPoint.Address = IPAddress.Parse("127.0.0.1");
-                    AdminSettings.Address = IPAddress.Parse("127.0.0.2");
+                    AdminSettings.Address = IPAddress.Parse("127.0.0.1");
                     break;
                 case NetworkModes.LocalNetwork:
-                    //TODO: make this work for local networks
-                    AdminEndPoint.Address = IPAddress.Parse("192.168.5.1");
-                    AdminSettings.Address = IPAddress.Parse("192.168.5.2");
+                    AdminEndPoint.Address = IPAddress.Parse(address);
+                    AdminSettings.Address = IPAddress.Parse(address);
+                    break;
+                case NetworkModes.LocalCustom:
+                    AdminEndPoint.Address = IPAddress.Parse(GetCurrentIP());
+                    AdminSettings.Address = IPAddress.Parse(GetCurrentIP());
                     break;
             }
+        }
+
+        public static string GetCurrentIP()
+        {
+            return Dns.GetHostEntry(Dns.GetHostName()).AddressList.First(x => x.AddressFamily == AddressFamily.InterNetwork).ToString();
         }
 
         public static void Reuse(this UdpClient client)
@@ -54,7 +62,8 @@ namespace UdpMulticastChatHW.Model
         public enum NetworkModes
         {
             LocalHost,
-            LocalNetwork
+            LocalNetwork, //User
+            LocalCustom //Admin
         }
     }
 }
